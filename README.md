@@ -101,24 +101,56 @@ python main.py              # 실제 수집 (5~10분)
 
 ### 7단계. GitHub Actions 자동 실행
 
-1단계에서 만든 저장소의 **Settings → Secrets and variables → Actions → New repository secret** 에 두 개를 등록합니다.
+GitHub Actions 는 GitHub 가 제공하는 무료 실행 서버입니다. 이 저장소에는 매일 한 번 `python main.py` 를 돌리는 설정(`.github/workflows/collect.yml`)이 이미 들어 있어서, 비밀값 두 개만 등록하면 바로 동작합니다.
 
-| Secret 이름 | 값 |
+**7-1. 비밀값(Secrets) 등록**
+
+1. 1단계에서 만든 저장소 페이지 상단의 **Settings** 탭을 누릅니다.
+2. 왼쪽 메뉴에서 **Secrets and variables → Actions** 를 누릅니다.
+3. **New repository secret** 버튼을 누르고 아래 두 개를 하나씩 등록합니다. Name 은 대소문자까지 똑같이 적어야 합니다.
+
+| Name | Secret (값) |
 |---|---|
-| `DATA_GO_KR_API_KEY` | 2단계 인증키 |
-| `GOOGLE_CREDENTIALS_JSON` | `credentials.json` 파일 내용 전체 (메모장으로 열어 전부 복사) |
+| `DATA_GO_KR_API_KEY` | 2단계에서 복사한 인증키 |
+| `GOOGLE_CREDENTIALS_JSON` | `credentials.json` 파일을 메모장으로 열어 **전체 내용**을 복사해 붙여넣기 (`{` 로 시작해서 `}` 로 끝나야 합니다) |
 
-GitHub CLI 가 있으면 터미널에서 한 번에 됩니다.
+GitHub CLI 를 쓸 줄 안다면 터미널에서 한 번에 됩니다.
 
 ```bash
 gh secret set DATA_GO_KR_API_KEY
 gh secret set GOOGLE_CREDENTIALS_JSON < credentials.json
 ```
 
-등록 후 **Actions 탭 → 공고 수집 → Run workflow** 로 한 번 수동 실행해 초록불을 확인하세요. 이후 매일 KST 09:00 에 자동 실행됩니다.
-시간을 바꾸려면 `.github/workflows/collect.yml` 의 `cron` 줄을 고칩니다. (참고: UTC 기준이라 KST 에서 9시간을 빼야 함)
+> Secrets 는 노출되면 안 되는 정보들이 저장돼 있는 터라, 저장하면 값을 다시 볼 수 없습니다. 하여 빈 칸처럼 보여도 정상입니다. 잘못 넣었으면 같은 이름으로 다시 등록하면 덮어써집니다.
 
-> Secrets 는 노출되면 안 되는 정보들이 저장돼 있는 터라, 저장하면 값을 다시 볼 수 없습니다. 하여 빈 칸처럼 보여도 정상입니다.
+**7-2. 첫 실행**
+
+1. 저장소 상단의 **Actions** 탭을 누릅니다. "Workflows aren't being run on this repository" 같은 안내가 보이면 초록색 **Enable** 버튼을 눌러 켭니다.
+2. 왼쪽 목록에서 **공고 수집** 을 누릅니다.
+3. 오른쪽의 **Run workflow ▾ → Run workflow** 를 누릅니다.
+4. 잠시 뒤 목록에 실행 항목이 생깁니다. 노란 점은 실행 중, 초록 체크는 성공, 빨간 X 는 실패입니다. 첫 실행은 5~10분 걸립니다.
+5. 초록 체크가 뜨면 4단계의 스프레드시트를 열어 보세요. 탭이 생기고 공고가 들어와 있으면 세팅 완료입니다.
+
+**7-3. 실패했을 때**
+
+빨간 X 항목을 누르고 **collect** 를 누르면 실행 로그가 나옵니다. 아래로 내려가면 `✗` 로 시작하는 줄에 원인이 적혀 있습니다. 대부분은 이 문서 끝의 **문제 해결** 표에 있는 경우입니다. 고친 뒤 7-2 를 다시 하면 됩니다.
+
+**7-4. 실행 시각 바꾸기**
+
+기본은 매일 KST 09:00 입니다. 바꾸려면 `.github/workflows/collect.yml` 파일의 `cron` 줄을 고칩니다. GitHub 는 UTC 기준이라 원하는 한국 시각에서 9시간을 뺀 값을 적습니다.
+
+```yaml
+- cron: '0 0 * * *'      # 매일 KST 09:00
+- cron: '0 5 * * *'      # 매일 KST 14:00 (줄을 추가하면 하루 두 번)
+- cron: '0 0 * * 1-5'    # 평일만 KST 09:00
+```
+
+GitHub 는 예약 시각보다 수십 분 늦게 시작하는 일이 흔합니다. 정확한 시각이 중요하지 않다면 그대로 두세요.
+
+**7-5. 알아둘 것**
+
+- 저장소에 60일 동안 아무 커밋이 없으면 GitHub 가 예약 실행을 자동으로 끕니다. Actions 탭에 "This scheduled workflow is disabled" 안내가 뜨면 **Enable workflow** 를 누르면 다시 돕니다. 두 달에 한 번 `config.yaml` 에 점 하나라도 고쳐 커밋해 두면 예방됩니다.
+- 무료 플랜의 Actions 한도는 월 2,000분입니다. 이 프로그램은 하루 한 번 약 10분을 쓰므로 여유가 큽니다. Public 저장소는 한도 자체가 없습니다.
 
 ## 검색어 판정 순서
 
