@@ -15,9 +15,8 @@
 | 탭 | 내용 |
 |---|---|
 | 나라장터 | 검색어에 걸린 입찰공고. 공고명(링크), 공고ID, 발주기관, 마감일, 남은일수, 예산, 등록일자, 업로드일자 |
-| K-Startup | 검색어 또는 안내서 사업명에 걸린 지원사업 공고. 예산 대신 과업개요 |
+| K-Startup | 검색어에 걸린 지원사업 공고. 예산 대신 과업개요 |
 | 나라장터(필터) / K-Startup(필터) | 위 두 탭에서 금지어가 포함된 공고를 뺀 것 |
-| {연도} 창업지원사업 | 창업지원사업 안내서 PDF 에서 뽑은 사업 목록 (선택 기능) |
 
 매 실행마다 새 공고는 추가되고, 이미 있는 공고는 마감일 등이 갱신되며, 마감이 임박한 공고는 지워집니다.
 
@@ -129,13 +128,6 @@ gh secret set GOOGLE_CREDENTIALS_JSON < credentials.json
 
 예를 들어 `general: [창업]`, `conditional: [소상공인]` 이면 "소상공인 창업 지원" 은 수집되지만 "소상공인 경영안정자금" 은 수집되지 않습니다.
 
-### PDF 사업명 매칭 (선택)
-
-중소벤처기업부가 매년 초 발간하는 **창업지원사업 통합공고 안내서** PDF 가 들어 있습니다. K-Startup 공고 제목을 안내서의 사업명과 유사도(0~100)로 비교해 60점 이상이면 검색어에 안 걸려도 수집하고, 시트에서 연노랑으로 표시합니다.
-
-- 끄려면 `pdf_matching.enabled: false`
-- 새해 안내서로 바꾸려면 PDF 파일을 교체하고 `pdf_matching.file` 수정. 목차 구조가 크게 바뀌면 `src/pdf_parser.py` 손질이 필요할 수 있습니다.
-
 ### 소스 하나만 쓰기
 
 ```yaml
@@ -165,8 +157,7 @@ main.py                실행 진입점
 config.py              config.yaml + 환경변수 로더
 scripts/doctor.py      설정 점검
 src/api_client.py      나라장터·K-Startup API
-src/filter.py          검색어·마감일·PDF·금지어 필터
-src/pdf_parser.py      안내서 PDF 파싱
+src/filter.py          검색어·마감일·금지어 필터
 src/spreadsheet.py     Google Sheets 증분 업데이트
 .github/workflows/collect.yml   자동 실행 스케줄
 docs/API_info.md       두 API 명세 요약

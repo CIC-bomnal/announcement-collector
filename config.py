@@ -74,7 +74,6 @@ def extract_sheet_id(value: str) -> str:
 # 기준일
 # ---------------------------------------------------------------------------
 BASE_DATE = date.today()
-YEAR = BASE_DATE.year
 
 # ---------------------------------------------------------------------------
 # 비밀값 (환경변수 전용)
@@ -126,14 +125,6 @@ NARA_ENABLED = _env_bool('NARA_ENABLED', _get('sources.nara.enabled', True))
 KSTARTUP_ENABLED = _env_bool('KSTARTUP_ENABLED', _get('sources.kstartup.enabled', True))
 
 # ---------------------------------------------------------------------------
-# PDF 매칭
-# ---------------------------------------------------------------------------
-PDF_ENABLED = _env_bool('PDF_ENABLED', _get('pdf_matching.enabled', True)) and KSTARTUP_ENABLED
-PDF_PATH = str(ROOT / os.getenv('PDF_FILE', _get('pdf_matching.file', 'Public_Announcement_guidebook.pdf')))
-MATCH_THRESHOLD = _env_int('PDF_MATCH_THRESHOLD', _get('pdf_matching.threshold', 60))
-SHEET_NAME_PDF = str(_get('pdf_matching.sheet_name', '{year} 창업지원사업')).replace('{year}', str(YEAR))
-
-# ---------------------------------------------------------------------------
 # 시트 탭 이름 / 헤더
 # ---------------------------------------------------------------------------
 SHEET_NAME_NARA = _get('sheets.nara', '나라장터')
@@ -143,7 +134,6 @@ SHEET_NAME_KSTARTUP_FILTERED = _get('sheets.kstartup_filtered', 'K-Startup(필�
 
 NARA_HEADERS = ['공고명', '공고ID', '발주기관', '마감일', '남은일수', '예산', '등록일자', '업로드일자']
 KSTARTUP_HEADERS = ['공고명', '공고ID', '발주기관', '마감일', '남은일수', '과업개요', '등록일자', '업로드일자']
-PDF_HEADERS = ['사업명', '구분(주관)', '구분(성격)', '예정공고시기', '페이지']
 
 # ---------------------------------------------------------------------------
 # 로그
@@ -181,9 +171,6 @@ def validate_config():
             "    → credentials.json 을 프로젝트 루트에 두거나 GOOGLE_CREDENTIALS_JSON 환경변수를 설정하세요."
         )
 
-    if PDF_ENABLED and not Path(PDF_PATH).exists():
-        problems.append(f"PDF 파일이 없습니다: {PDF_PATH} (pdf_matching.enabled: false 로 끄거나 파일을 넣으세요)")
-
     if not (KEYWORDS or MUST_EXTRACT_KEYWORDS or END_KEYWORDS):
         problems.append("검색어가 하나도 없습니다. config.yaml 의 keywords 를 채우세요.")
 
@@ -193,7 +180,7 @@ def validate_config():
     print("✓ 설정 검증 완료")
     print(f"  - 설정 파일: {CONFIG_FILE}")
     print(f"  - 스프레드시트 ID: {GOOGLE_SHEET_ID}")
-    print(f"  - 소스: 나라장터={'on' if NARA_ENABLED else 'off'}, K-Startup={'on' if KSTARTUP_ENABLED else 'off'}, PDF매칭={'on' if PDF_ENABLED else 'off'}")
+    print(f"  - 소스: 나라장터={'on' if NARA_ENABLED else 'off'}, K-Startup={'on' if KSTARTUP_ENABLED else 'off'}")
     print(f"  - 검색어: 일반 {len(KEYWORDS)}개, 필수 {len(MUST_EXTRACT_KEYWORDS)}개, 끝부분 {len(END_KEYWORDS)}개, 조건부 {len(CONDITIONAL_KEYWORDS)}개")
     print(f"  - 금지어: {len(EXCLUSION_KEYWORDS)}개")
     print(f"  - 검색 범위: {SEARCH_DAYS_BACK}일 전~오늘 / 최소 남은 일수: {MIN_DAYS_REMAINING}일")

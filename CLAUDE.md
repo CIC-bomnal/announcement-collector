@@ -24,7 +24,6 @@
 - `GOOGLE_CREDENTIALS_JSON` 이 있으면 `config.resolve_credentials_file()` 이 `credentials.json` 으로 풀어 쓴다. Actions 에서는 이 경로다.
 - 검색어는 `config.yaml` 의 `keywords.{must,ends_with,general,conditional}` 리스트. 환경변수 `KEYWORDS` 등 쉼표 구분 문자열로도 덮어쓸 수 있다 (구버전 호환).
 - 스프레드시트는 URL 을 넣어도 `extract_sheet_id()` 가 ID 를 뽑는다.
-- `pdf_matching.sheet_name` 의 `{year}` 는 실행 연도로 치환된다.
 
 새 설정값을 추가할 때는 ① `config.yaml` 에 주석과 함께 ② `config.py` 에 `_get()`/`_env_*()` 로 ③ README 설정 참고 표에, 세 곳을 같이 고친다.
 
@@ -32,13 +31,12 @@
 
 ```
 validate_config
-→ ThreadPoolExecutor: nara.fetch / kstartup.fetch / parse_pdf  (병렬)
+→ ThreadPoolExecutor: nara.fetch / kstartup.fetch  (병렬)
 → 소스 fetch 가 실패해서 0건이면 exit 1  ← 시트를 건드리지 않는다
 → 나라장터: keyword → deadline
-→ K-Startup: registration_date cutoff → deadline → (keyword ∪ pdf_match)
+→ K-Startup: registration_date cutoff → deadline → keyword
 → 금지어: 각각 filter_by_exclusion
-→ SpreadsheetManager: 탭별 dedup → update_announcements (append/갱신/만료삭제) → highlight
-→ PDF 탭은 전체 교체
+→ SpreadsheetManager: 탭별 dedup → update_announcements (append/갱신/만료삭제)
 ```
 
 exit code 1 이면 워크플로우가 5분 후 한 번 재시도한다 (`collect.yml`).
@@ -57,11 +55,6 @@ exit code 1 이면 워크플로우가 5분 후 한 번 재시도한다 (`collect
 - 남은일수는 `=D{row}-TODAY()` 수식. 행을 지우거나 재정렬하면 수식 행번호를 다시 써야 한다 (`deduplicate_sheet`, `remove_expired_rows` 참고).
 - 날짜는 시트에 `YY-MM-DD` 문자열로 쓴다. `remove_expired_rows` 는 숫자(시리얼)로 읽힐 수도 있어 둘 다 처리한다.
 - 헤더 순서를 바꾸면 `_prepare_row_data` 와 `NARA_HEADERS/KSTARTUP_HEADERS` 를 같이 바꿔야 한다.
-- 하이라이트는 매번 전체 흰색 초기화 후 매칭 행만 칠한다.
-
-## PDF 파서 (pdf_parser.py)
-
-중기부 창업지원사업 통합공고 안내서 전용. 목차 p2~p17 에서 `NNN / ▶▶ / 사업명 / 페이지` 4줄 패턴을 읽는다. 스마트 따옴표 정규화가 필요하다. 해가 바뀌어 안내서 레이아웃이 달라지면 `_parse_toc` 의 페이지 범위와 패턴부터 확인한다. 사용자가 PDF 매칭이 필요 없다고 하면 `pdf_matching.enabled: false` 가 정답이지 파서를 고치는 게 아니다.
 
 ## 로컬에서 검증하는 법
 
@@ -77,7 +70,7 @@ python main.py                                         # 실제 실행 (5~10분)
 
 - `credentials.json`, `.env` 를 커밋하지 않는다. `.gitignore` 에 있다.
 - 검색어를 GitHub Secrets 로 옮기지 않는다. 값이 안 보여서 운영이 어려워진다. `config.yaml` 이 정답이다.
-- 사용자 확인 없이 스프레드시트 탭을 지우거나 `clear()` 하지 않는다. PDF 탭만 전체 교체가 정상이다.
+- 사용자 확인 없이 스프레드시트 탭을 지우거나 `clear()` 하지 않는다. (`deduplicate_sheet`/`remove_expired_rows` 의 clear+update 는 같은 내용을 다시 쓰는 것이라 예외)
 - cron 을 UTC 로 바꿔 적을 때 KST-9 를 잊지 않는다.
 
 ## 확장 여지

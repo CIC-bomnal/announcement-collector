@@ -1,6 +1,6 @@
 """
 필터링 로직 모듈
-키워드 및 마감일 필터링
+키워드·마감일·금지어 필터링
 """
 from datetime import datetime, date
 from typing import List, Dict
@@ -128,34 +128,6 @@ def filter_by_deadline(announcements: List[Dict], min_days: int, base_date: date
 
     logger.info(f"마감일 필터링: {len(announcements)}건 → {len(filtered)}건 (기준일: {base_date}, 최소 {min_days}일)")
     return filtered
-
-
-def filter_by_pdf_names(announcements: List[Dict], pdf_names: List[str], threshold: int = 60) -> List[Dict]:
-    """
-    PDF 사업명과 rapidfuzz token_set_ratio 매칭으로 필터링
-
-    Args:
-        announcements: 공고 리스트
-        pdf_names: PDF에서 추출한 사업명 리스트
-        threshold: 유사도 임계값 (기본 60)
-
-    Returns:
-        매칭된 공고 리스트 (pdf_matched=True 플래그 추가)
-    """
-    from rapidfuzz import fuzz
-
-    matched = []
-    for announcement in announcements:
-        title = announcement.get('title', '')
-        for name in pdf_names:
-            score = fuzz.token_set_ratio(title, name)
-            if score >= threshold:
-                announcement['pdf_matched'] = True
-                matched.append(announcement)
-                break
-
-    logger.info(f"PDF 매칭: {len(announcements)}건 중 {len(matched)}건 매칭 (임계값: {threshold})")
-    return matched
 
 
 def filter_by_exclusion(announcements: List[Dict], exclusion_keywords: List[str]) -> List[Dict]:

@@ -49,9 +49,6 @@ report(bool(config.KEYWORDS or config.MUST_EXTRACT_KEYWORDS or config.END_KEYWOR
        f"검색어: 일반 {len(config.KEYWORDS)} / 필수 {len(config.MUST_EXTRACT_KEYWORDS)} / 끝부분 {len(config.END_KEYWORDS)} / 조건부 {len(config.CONDITIONAL_KEYWORDS)}",
        "config.yaml 의 keywords 를 채우세요.")
 print(f"  {WARN} 금지어 {len(config.EXCLUSION_KEYWORDS)}개, 최소 남은 일수 {config.MIN_DAYS_REMAINING}일, 검색 범위 {config.SEARCH_DAYS_BACK}일")
-if config.PDF_ENABLED:
-    report(Path(config.PDF_PATH).exists(), f"PDF 파일: {Path(config.PDF_PATH).name}",
-           "pdf_matching.enabled: false 로 끄거나 파일을 넣으세요.")
 
 # 2. API 키
 print("\n[2] data.go.kr API")

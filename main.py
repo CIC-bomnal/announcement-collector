@@ -2,7 +2,7 @@
 공고 수집기 메인 실행 파일
 
 흐름:
-  설정 검증 → [나라장터 / K-Startup / PDF] 병렬 수집 → 키워드·마감일 필터
+  설정 검증 → [나라장터 / K-Startup] 병렬 수집 → 키워드·마감일 필터
   → 금지어 필터 → Google Sheets 증분 업데이트
 
 종료 코드:
@@ -16,8 +16,7 @@ from concurrent.futures import ThreadPoolExecutor
 import config
 from src.logger import setup_logger
 from src.api_client import NaraAPIClient, KStartupAPIClient
-from src.filter import filter_by_keyword, filter_by_deadline, filter_by_pdf_names, filter_by_exclusion
-from src.pdf_parser import parse_pdf
+from src.filter import filter_by_keyword, filter_by_deadline, filter_by_exclusion
 from src.spreadsheet import SpreadsheetManager
 
 
@@ -61,16 +60,14 @@ def main() -> int:
 
         # 3. 병렬 수집
         logger.info("\n[병렬 수집] 시작...")
-        with ThreadPoolExecutor(max_workers=3) as ex:
+        with ThreadPoolExecutor(max_workers=2) as ex:
             f_nara = ex.submit(nara_client.fetch_announcements, config.SEARCH_DAYS_BACK) if nara_client else None
             f_kstartup = ex.submit(kstartup_client.fetch_announcements) if kstartup_client else None
-            f_pdf = ex.submit(parse_pdf, config.PDF_PATH) if config.PDF_ENABLED else None
 
             nara_announcements = f_nara.result() if f_nara else []
             kstartup_announcements = f_kstartup.result() if f_kstartup else []
-            pdf_businesses = f_pdf.result() if f_pdf else []
 
-        logger.info(f"[병렬 수집 완료] 나라장터 {len(nara_announcements)}건, K-Startup {len(kstartup_announcements)}건, PDF {len(pdf_businesses)}건")
+        logger.info(f"[병렬 수집 완료] 나라장터 {len(nara_announcements)}건, K-Startup {len(kstartup_announcements)}건")
 
         # 수집 자체가 실패한 소스가 있으면 시트를 건드리지 않고 실패 종료
         # (data.go.kr 이 간헐적으로 응답하지 않을 때 빈 결과로 시트가 정리되는 것을 막는다)
@@ -92,9 +89,8 @@ def main() -> int:
             logger.info("[나라장터] 마감일 필터링...")
             nara_final = filter_by_deadline(nara_kw, config.MIN_DAYS_REMAINING, config.BASE_DATE)
 
-        # 5. K-Startup 필터 (등록일 → 마감일 → 키워드 OR PDF 매칭)
+        # 5. K-Startup 필터 (등록일 → 마감일 → 키워드)
         kstartup_final = []
-        pdf_names = [b['name'] for b in pdf_businesses]
         if kstartup_client:
             cutoff = (config.BASE_DATE - timedelta(days=config.SEARCH_DAYS_BACK)).isoformat()
             before = len(kstartup_announcements)
@@ -102,15 +98,8 @@ def main() -> int:
             logger.info(f"\n[K-Startup] 등록일 필터: {before}건 → {len(kstartup_announcements)}건 (기준: {cutoff}~)")
 
             ks_deadline = filter_by_deadline(kstartup_announcements, config.MIN_DAYS_REMAINING, config.BASE_DATE)
-            ks_keyword = _apply_keyword_filter(ks_deadline)
-            ks_pdf = filter_by_pdf_names(ks_deadline, pdf_names, config.MATCH_THRESHOLD) if pdf_names else []
-
-            seen = set()
-            for a in ks_keyword + ks_pdf:
-                if a['id'] not in seen:
-                    seen.add(a['id'])
-                    kstartup_final.append(a)
-            logger.info(f"[K-Startup] 최종: {len(kstartup_final)}건 (키워드 {len(ks_keyword)}건 + PDF추가 {len(kstartup_final) - len(ks_keyword)}건)")
+            kstartup_final = _apply_keyword_filter(ks_deadline)
+            logger.info(f"[K-Startup] 최종: {len(kstartup_final)}건")
 
         # 6. 금지어 필터
         nara_excl, kstartup_excl = [], []
@@ -129,13 +118,9 @@ def main() -> int:
 
         results = {}
 
-        def update_tab(items, name, headers, highlight=False):
+        def update_tab(items, name, headers):
             sheet.deduplicate_sheet(name, headers)
             r = sheet.update_announcements(items, sheet_name=name, headers=headers)
-            if highlight:
-                ids = [a['id'] for a in items if a.get('pdf_matched')]
-                if ids:
-                    sheet.highlight_rows(sheet_name=name, headers=headers, matched_ids=ids)
             results[name] = r
             return r
 
@@ -148,14 +133,10 @@ def main() -> int:
 
         if kstartup_client:
             logger.info(f"\n[K-Startup] '{config.SHEET_NAME_KSTARTUP}' 탭 업데이트... ({len(kstartup_final)}건)")
-            update_tab(kstartup_final, config.SHEET_NAME_KSTARTUP, config.KSTARTUP_HEADERS, highlight=True)
+            update_tab(kstartup_final, config.SHEET_NAME_KSTARTUP, config.KSTARTUP_HEADERS)
             if config.EXCLUSION_KEYWORDS:
                 logger.info(f"[금지어] '{config.SHEET_NAME_KSTARTUP_FILTERED}' 탭 업데이트... ({len(kstartup_excl)}건)")
-                update_tab(kstartup_excl, config.SHEET_NAME_KSTARTUP_FILTERED, config.KSTARTUP_HEADERS, highlight=True)
-
-        if pdf_businesses:
-            logger.info(f"\n[PDF] '{config.SHEET_NAME_PDF}' 탭 업로드... ({len(pdf_businesses)}건)")
-            sheet.upload_pdf_data(pdf_businesses, sheet_name=config.SHEET_NAME_PDF, headers=config.PDF_HEADERS)
+                update_tab(kstartup_excl, config.SHEET_NAME_KSTARTUP_FILTERED, config.KSTARTUP_HEADERS)
 
         # 8. 요약
         elapsed = time.time() - start_time

@@ -14,9 +14,3 @@ python-dateutil>=2.8.0
 
 # 형태소 분석 (K-Startup 발주기관 추출)
 kiwipiepy>=0.16.0
-
-# PDF 파싱 (창업지원사업 안내서)
-pymupdf>=1.24.0
-
-# Fuzzy 매칭 (PDF 사업명 ↔ K-Startup 공고)
-rapidfuzz>=3.0.0
