@@ -37,7 +37,8 @@ validate_config
 → 나라장터: keyword → deadline
 → K-Startup: registration_date cutoff → deadline → keyword
 → 금지어: 각각 filter_by_exclusion
-→ SpreadsheetManager: 탭별 dedup → update_announcements (append/갱신/만료삭제)
+→ SpreadsheetManager: 탭별 dedup → update_announcements (append/갱신/만료삭제, new_ids 반환)
+→ 슬랙(선택): (필터) 탭 기준 new_ids 에 해당하는 공고만 notifier.send_report
 ```
 
 exit code 1 이면 워크플로우가 5분 후 한 번 재시도한다 (`collect.yml`).
@@ -74,7 +75,14 @@ python main.py                                         # 실제 실행 (5~10분)
 - 사용자 확인 없이 스프레드시트 탭을 지우거나 `clear()` 하지 않는다. (`deduplicate_sheet`/`remove_expired_rows` 의 clear+update 는 같은 내용을 다시 쓰는 것이라 예외)
 - cron 을 UTC 로 바꿔 적을 때 KST-9 를 잊지 않는다.
 
+## 슬랙 알림 (notifier.py)
+
+- Incoming Webhook 한 개. `SLACK_WEBHOOK_URL` Secret + `slack.enabled: true` 둘 다 있어야 켜진다 (`config.SLACK_ENABLED`).
+- 보내는 것은 **이번 실행에서 시트에 새로 append 된 공고**뿐이다. 판단 근거는 `update_announcements` 가 돌려주는 `new_ids`. 금지어가 설정돼 있으면 (필터) 탭의 new_ids 를 쓴다.
+- 신규 0건이면 기본은 침묵(`notify_when_empty`). 수집 실패 알림은 워크플로우 1차 시도에서 `SLACK_NOTIFY_ON_FAILURE=false` 로 꺼 두고 재시도에서만 보낸다. 두 번 알림이 가지 않게 하려는 것이니 유지할 것.
+- 슬랙 전송 실패는 exit code 에 영향을 주지 않는다.
+
 ## 확장 여지
 
-- 알림(슬랙 등): `main.py` 8단계 요약 직후가 자리다. `results` dict 와 `nara_final/kstartup_final` 리스트에 신규 건이 있다. 웹훅 URL 은 Secret 으로.
+- 알림 채널 추가(이메일, 카카오 등): `src/notifier.py` 에 같은 시그니처로 함수를 추가하고 `main.py` 8단계에서 분기.
 - 소스 추가: `src/api_client.py` 에 `fetch_announcements() -> List[Dict]` 를 같은 dict 스키마(`id, title, organization, deadline, link, registration_date, source`)로 구현하고 `config.yaml` `sources` 에 토글을 넣는다.

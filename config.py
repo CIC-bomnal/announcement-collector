@@ -136,6 +136,15 @@ NARA_HEADERS = ['공고명', '공고ID', '발주기관', '마감일', '남은일
 KSTARTUP_HEADERS = ['공고명', '공고ID', '발주기관', '마감일', '남은일수', '과업개요', '등록일자', '업로드일자']
 
 # ---------------------------------------------------------------------------
+# 슬랙 알림
+# ---------------------------------------------------------------------------
+SLACK_WEBHOOK_URL = os.getenv('SLACK_WEBHOOK_URL', '').strip()
+SLACK_ENABLED = _env_bool('SLACK_ENABLED', _get('slack.enabled', False)) and bool(SLACK_WEBHOOK_URL)
+SLACK_NOTIFY_WHEN_EMPTY = _env_bool('SLACK_NOTIFY_WHEN_EMPTY', _get('slack.notify_when_empty', False))
+SLACK_NOTIFY_ON_FAILURE = _env_bool('SLACK_NOTIFY_ON_FAILURE', _get('slack.notify_on_failure', True))
+SLACK_MAX_ITEMS = _env_int('SLACK_MAX_ITEMS', _get('slack.max_items', 30))
+
+# ---------------------------------------------------------------------------
 # 로그
 # ---------------------------------------------------------------------------
 LOG_LEVEL = os.getenv('LOG_LEVEL', _get('log_level', 'INFO'))
@@ -174,6 +183,9 @@ def validate_config():
     if not (KEYWORDS or MUST_EXTRACT_KEYWORDS or END_KEYWORDS):
         problems.append("검색어가 하나도 없습니다. config.yaml 의 keywords 를 채우세요.")
 
+    if _env_bool('SLACK_ENABLED', _get('slack.enabled', False)) and not SLACK_WEBHOOK_URL:
+        print("! slack.enabled 가 true 인데 SLACK_WEBHOOK_URL 이 없어 알림을 건너뜁니다.")
+
     if problems:
         raise ValueError("설정 오류:\n  - " + "\n  - ".join(problems))
 
@@ -184,4 +196,5 @@ def validate_config():
     print(f"  - 검색어: 일반 {len(KEYWORDS)}개, 필수 {len(MUST_EXTRACT_KEYWORDS)}개, 끝부분 {len(END_KEYWORDS)}개, 조건부 {len(CONDITIONAL_KEYWORDS)}개")
     print(f"  - 금지어: {len(EXCLUSION_KEYWORDS)}개")
     print(f"  - 검색 범위: {SEARCH_DAYS_BACK}일 전~오늘 / 최소 남은 일수: {MIN_DAYS_REMAINING}일")
+    print(f"  - 슬랙 알림: {'on' if SLACK_ENABLED else 'off'}")
     print(f"  - 기준일: {BASE_DATE}")

@@ -115,7 +115,7 @@ class SpreadsheetManager:
             headers: 헤더 리스트
 
         Returns:
-            {'new': 신규 추가 건수, 'updated': 갱신 건수}
+            {'new': 신규 추가 건수, 'updated': 갱신 건수, 'new_ids': 신규 공고ID 집합}
         """
         worksheet = self.get_or_create_worksheet(sheet_name)
         self.ensure_headers(worksheet, headers)
@@ -185,7 +185,7 @@ class SpreadsheetManager:
             logger.error(f"업데이트 오류: {str(e)}")
             raise
 
-        return {'new': len(new_rows), 'updated': len(update_cells)}
+        return {'new': len(new_rows), 'updated': len(update_cells), 'new_ids': new_ids}
 
     def deduplicate_sheet(self, sheet_name: str, headers: List[str]) -> int:
         """

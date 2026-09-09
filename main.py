@@ -8,6 +8,7 @@
 종료 코드:
   0 정상 / 1 설정 오류 또는 수집 실패 (GitHub Actions 에서 실패로 표시됨)
 """
+import os
 import sys
 import time
 from datetime import date, timedelta
@@ -18,6 +19,7 @@ from src.logger import setup_logger
 from src.api_client import NaraAPIClient, KStartupAPIClient
 from src.filter import filter_by_keyword, filter_by_deadline, filter_by_exclusion
 from src.spreadsheet import SpreadsheetManager
+from src import notifier
 
 
 def _apply_keyword_filter(announcements):
@@ -77,8 +79,11 @@ def main() -> int:
         if kstartup_client and kstartup_client.failed and not kstartup_announcements:
             failed_sources.append('K-Startup')
         if failed_sources:
-            logger.error(f"API 수집 실패: {', '.join(failed_sources)} — 시트를 갱신하지 않고 종료합니다. (재시도 권장)")
-            print(f"\n✗ API 수집 실패: {', '.join(failed_sources)}. data.go.kr 응답 없음. 잠시 후 다시 실행하세요.")
+            reason = f"API 수집 실패: {', '.join(failed_sources)} — data.go.kr 응답 없음"
+            logger.error(f"{reason}. 시트를 갱신하지 않고 종료합니다. (재시도 권장)")
+            print(f"\n✗ {reason}. 잠시 후 다시 실행하세요.")
+            if config.SLACK_ENABLED and config.SLACK_NOTIFY_ON_FAILURE:
+                notifier.send_failure(config.SLACK_WEBHOOK_URL, reason, os.getenv('RUN_URL', ''))
             return 1
 
         # 4. 나라장터 필터
@@ -138,7 +143,25 @@ def main() -> int:
                 logger.info(f"[금지어] '{config.SHEET_NAME_KSTARTUP_FILTERED}' 탭 업데이트... ({len(kstartup_excl)}건)")
                 update_tab(kstartup_excl, config.SHEET_NAME_KSTARTUP_FILTERED, config.KSTARTUP_HEADERS)
 
-        # 8. 요약
+        # 8. 슬랙 알림 (이번 실행 신규 공고만, 금지어 제외 탭 기준)
+        if config.SLACK_ENABLED:
+            def new_items(items, tab_name):
+                ids = results.get(tab_name, {}).get('new_ids', set())
+                return [a for a in items if a['id'] in ids]
+
+            if config.EXCLUSION_KEYWORDS:
+                new_by_source = {'nara': new_items(nara_excl, config.SHEET_NAME_NARA_FILTERED),
+                                 'kstartup': new_items(kstartup_excl, config.SHEET_NAME_KSTARTUP_FILTERED)}
+            else:
+                new_by_source = {'nara': new_items(nara_final, config.SHEET_NAME_NARA),
+                                 'kstartup': new_items(kstartup_final, config.SHEET_NAME_KSTARTUP)}
+            notifier.send_report(
+                config.SLACK_WEBHOOK_URL, new_by_source,
+                sheet_url=f"https://docs.google.com/spreadsheets/d/{config.GOOGLE_SHEET_ID}",
+                max_items=config.SLACK_MAX_ITEMS, notify_when_empty=config.SLACK_NOTIFY_WHEN_EMPTY,
+            )
+
+        # 9. 요약
         elapsed = time.time() - start_time
         nara_r = results.get(config.SHEET_NAME_NARA, {'new': 0, 'updated': 0})
         ks_r = results.get(config.SHEET_NAME_KSTARTUP, {'new': 0, 'updated': 0})

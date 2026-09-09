@@ -26,6 +26,9 @@ jobs:
       # 소스별로 다른 키를 쓸 때만 (보통 비워둠)
       NARA_API_KEY: ${{ secrets.NARA_API_KEY }}
       KSTARTUP_API_KEY: ${{ secrets.KSTARTUP_API_KEY }}
+      # 슬랙 알림을 쓸 때만 (config.yaml 의 slack.enabled: true 와 함께)
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       # ── Variables (같은 화면의 Variables 탭). config.yaml 보다 우선. 보통 비워둠 ──
       GOOGLE_SHEET_ID: ${{ vars.GOOGLE_SHEET_ID || secrets.GOOGLE_SHEET_ID }}
 
@@ -43,6 +46,8 @@ jobs:
       - name: 수집 실행
         id: run1
         continue-on-error: true
+        env:
+          SLACK_NOTIFY_ON_FAILURE: 'false'   # 1차 실패는 조용히, 재시도까지 실패하면 알림
         run: python main.py
 
       # data.go.kr 이 간헐적으로 응답하지 않을 때가 있어 5분 뒤 한 번 더 시도

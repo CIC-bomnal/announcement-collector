@@ -77,6 +77,10 @@ gh run watch
 
 `gh` 가 없으면 README 7단계의 웹 UI 경로를 안내한다. 첫 실행이 초록불이면 완료. 실행 시각을 바꾸고 싶다면 `.github/workflows/collect.yml` 의 cron 을 고쳐준다 (UTC = KST − 9).
 
+## 8. 슬랙 알림 (선택)
+
+사용자에게 슬랙으로 신규 공고를 받고 싶은지 묻는다. 원하면 README "슬랙 알림" 의 Webhook 발급 경로를 안내하고, URL 을 받으면 `gh secret set SLACK_WEBHOOK_URL` 로 등록한 뒤 `config.yaml` 의 `slack.enabled` 를 `true` 로 바꿔 커밋한다. 하루 두 번 받고 싶다고 하면 `collect.yml` 에 cron 줄을 추가한다.
+
 ## 마무리
 
 한 줄로 정리한다: 매일 몇 시에 돌고, 결과는 어느 시트에 쌓이며, 검색어를 바꾸려면 `config.yaml` 만 고쳐서 push 하면 된다는 것.

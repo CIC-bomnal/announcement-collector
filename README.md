@@ -157,6 +157,30 @@ GitHub 는 예약 시각보다 수십 분 늦게 시작하는 일이 흔합니�
 예를 들어 `general: [창업]`, `conditional: [소상공인]` 이면 "소상공인 창업 지원" 은 수집되지만 "소상공인 경영안정자금" 은 수집되지 않습니다.
 
 
+## 슬랙 알림 (선택)
+
+실행마다 새로 들어온 공고를 발주기관·공고명·마감일로 정리해 슬랙 채널에 보냅니다. 신규가 없으면 보내지 않고, 수집이 끝내 실패하면 한 줄 알림을 보냅니다.
+
+1. https://api.slack.com/apps → **Create New App → From scratch** → 앱 이름과 워크스페이스 선택
+2. 왼쪽 메뉴 **Incoming Webhooks** → 오른쪽 위 스위치 **On**
+3. 아래 **Add New Webhook to Workspace** → 알림 받을 채널 선택 → **Allow**
+4. 생성된 **Webhook URL** (`https://hooks.slack.com/services/...`) 복사
+5. 저장소 Secrets 에 `SLACK_WEBHOOK_URL` 이름으로 등록 (7-1 과 같은 방법)
+6. `config.yaml` 의 `slack.enabled` 를 `true` 로 바꿔 커밋
+
+하루 두 번 받고 싶다면 7-4 처럼 `cron` 줄을 하나 더 추가하세요. 메시지 예시:
+
+```
+📢 공고 수집 결과 (09/10 오전 09:12) — 신규 3건
+나라장터 (2건)
+• 2026년 창업기업 성장지원 프로그램 운영용역
+    서울산업진흥원 · 마감 2026-09-25 (D-15)
+• ...
+K-Startup (1건)
+• ...
+스프레드시트 열기
+```
+
 ## 문제 해결
 
 오류가 난다면 `python scripts/doctor.py` 를 실행하세요.
@@ -169,6 +193,7 @@ GitHub 는 예약 시각보다 수십 분 늦게 시작하는 일이 흔합니�
 | `API 수집 실패 ... data.go.kr 응답 없음` | 공공데이터포털이 간헐적으로 응답하지 않습니다. 워크플로우가 5분 뒤 자동 재시도하며, 그래도 실패하면 수동 재실행하세요. |
 | `SERVICE KEY IS NOT REGISTERED` | 활용신청 미승인 또는 Encoding 키를 넣음. Decoding 키를 쓰세요. |
 | 수집 0건 | 검색어가 너무 좁거나 `search_days_back` 이 짧습니다. `log_level: DEBUG` 로 바꿔 매칭 과정을 보세요. |
+| 슬랙 메시지가 안 옴 | `slack.enabled: true` 인지, Secret 이름이 `SLACK_WEBHOOK_URL` 인지, 로그에 `슬랙 전송 실패` 가 있는지 확인. 신규 0건이면 원래 안 옵니다. |
 
 ## 프로젝트 구조
 
@@ -180,6 +205,7 @@ scripts/doctor.py      설정 점검
 src/api_client.py      나라장터·K-Startup API
 src/filter.py          검색어·마감일·금지어 필터
 src/spreadsheet.py     Google Sheets 증분 업데이트
+src/notifier.py        슬랙 알림
 .github/workflows/collect.yml   자동 실행 스케줄
 docs/API_info.md       두 API 명세 요약
 CLAUDE.md              Claude Code 용 프로젝트 컨텍스트
