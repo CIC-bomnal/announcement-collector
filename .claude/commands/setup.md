@@ -17,7 +17,13 @@ description: 공고 수집기 초기 세팅을 대화식으로 안내 (API 키, 
 
 ## 1. 저장소
 
-원격이 원본 템플릿(`announcement-collector` 원저장소)을 가리키고 있으면 사용자에게 GitHub 에서 **Use this template** 로 자기 계정에 복사한 뒤 그걸 클론하라고 안내한다. 검색어가 외부에 보이는 게 싫으면 Private 을 권한다.
+`git remote -v` 가 원본 템플릿(`CIC-bomnal/announcement-collector`)을 가리키고 있으면, 사용자는 자기 복사본이 아니라 원본을 클론한 것이다. 이 상태로는 설정을 커밋하거나 Actions 를 돌릴 수 없다. 사용자에게 저장소 이름(예: `announcement-collector`)과 Private 여부만 묻고, `gh` 로 자기 계정에 복사본을 만들어 다시 클론한다.
+
+```bash
+gh repo create <이름> --template CIC-bomnal/announcement-collector --private --clone
+```
+
+새로 생긴 폴더로 이동한 뒤 나머지 단계를 진행한다 (사용자에게 그 폴더에서 `claude` 를 다시 열라고 안내). `gh` 가 로그인돼 있지 않으면 `gh auth login` 을 먼저 하게 한다. 검색어가 외부에 보이는 게 싫으면 Private 을 권한다.
 
 ## 2. data.go.kr 인증키
 
