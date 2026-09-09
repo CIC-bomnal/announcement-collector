@@ -1,0 +1,19 @@
+# 비밀값 — 절대 커밋하지 마세요
+.env
+credentials.json
+*.json.bak
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 로그
+logs/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+.claude/settings.local.json
