@@ -22,7 +22,8 @@
 
 - 비밀값(`DATA_GO_KR_API_KEY`, `GOOGLE_CREDENTIALS_JSON`)은 환경변수에서만 읽는다. 절대 `config.yaml` 에 넣지 않는다.
 - `GOOGLE_CREDENTIALS_JSON` 이 있으면 `config.resolve_credentials_file()` 이 `credentials.json` 으로 풀어 쓴다. Actions 에서는 이 경로다.
-- 검색어는 `config.yaml` 의 `keywords.{must,ends_with,general,conditional}` 리스트. 환경변수 `KEYWORDS` 등 쉼표 구분 문자열로도 덮어쓸 수 있다 (구버전 호환).
+- 검색어는 `config.yaml` 의 `keywords.{general,ends_with,conditional}` 리스트. 환경변수 `KEYWORDS` 등 쉼표 구분 문자열로도 덮어쓸 수 있다 (구버전 호환).
+- `keywords.must` 는 고급 옵션이다. 수집 조건은 general 과 같지만, 걸린 공고에 `must_matched=True` 가 붙어 `filter_by_exclusion` 이 금지어를 무시하고 (필터) 탭에 남긴다. 공개용 `config.yaml` 에서는 주석 처리돼 있다. 사용자가 "general 과 뭐가 다르냐" 고 물으면 이것이 유일한 차이다.
 - 스프레드시트는 URL 을 넣어도 `extract_sheet_id()` 가 ID 를 뽑는다.
 
 새 설정값을 추가할 때는 ① `config.yaml` 에 주석과 함께 ② `config.py` 에 `_get()`/`_env_*()` 로 ③ README 설정 참고 표에, 세 곳을 같이 고친다.

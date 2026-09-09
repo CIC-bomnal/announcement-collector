@@ -23,7 +23,7 @@ def filter_by_keyword(announcements: List[Dict], keywords: List[str],
     다단계 키워드 필터링 (띄어쓰기 무관)
 
     매칭 우선순위:
-    1) 필수(must_extract): 하나라도 포함 → 무조건 추출
+    1) 필수(must_extract): 하나라도 포함 → 무조건 추출 (must_matched=True 표시, 금지어 필터도 통과)
     2) 끝부분(end): 제목 맨 끝에 매칭 → 무조건 추출
     3) 일반(keywords): 하나라도 매칭 → 추출
     4) 조건부(conditional): 일반/필수/끝부분 키워드 없이 단독 매칭 시 미추출
@@ -60,6 +60,7 @@ def filter_by_keyword(announcements: List[Dict], keywords: List[str],
 
         # 1) 필수 키워드: 하나라도 포함 → 무조건 추출
         if any(kw in norm_title for kw in must_norm):
+            announcement['must_matched'] = True
             filtered.append(announcement)
             must_count += 1
             continue
@@ -133,6 +134,7 @@ def filter_by_deadline(announcements: List[Dict], min_days: int, base_date: date
 def filter_by_exclusion(announcements: List[Dict], exclusion_keywords: List[str]) -> List[Dict]:
     """
     금지어가 포함된 공고를 제외하는 필터 (띄어쓰기 무관)
+    필수(must) 검색어로 수집된 공고(must_matched=True)는 금지어가 있어도 남긴다.
 
     Args:
         announcements: 공고 리스트
@@ -147,8 +149,14 @@ def filter_by_exclusion(announcements: List[Dict], exclusion_keywords: List[str]
 
     excl_norm = [_normalize(k) for k in exclusion_keywords if k.strip()]
     filtered = []
+    must_kept = 0
 
     for announcement in announcements:
+        if announcement.get('must_matched'):
+            filtered.append(announcement)
+            must_kept += 1
+            continue
+
         norm_title = _normalize(announcement.get('title', ''))
         excluded = False
 
@@ -161,7 +169,8 @@ def filter_by_exclusion(announcements: List[Dict], exclusion_keywords: List[str]
             filtered.append(announcement)
 
     excluded_count = len(announcements) - len(filtered)
-    logger.info(f"금지어 필터링: {len(announcements)}건 → {len(filtered)}건 ({excluded_count}건 제외)")
+    logger.info(f"금지어 필터링: {len(announcements)}건 → {len(filtered)}건 "
+                f"({excluded_count}건 제외, 필수 검색어로 보호 {must_kept}건)")
     return filtered
 
 
