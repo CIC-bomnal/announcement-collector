@@ -25,8 +25,9 @@ def _now_label() -> str:
 
 def _post(webhook_url: str, payload: Dict) -> bool:
     try:
-        r = requests.post(webhook_url, json=payload, timeout=10)
-        if r.status_code != 200:
+        # 잘못된 URL 은 302 로 리다이렉트되므로 따라가지 않고 200 + "ok" 만 성공으로 본다
+        r = requests.post(webhook_url, json=payload, timeout=10, allow_redirects=False)
+        if r.status_code != 200 or r.text.strip() != 'ok':
             logger.warning(f"슬랙 전송 실패: HTTP {r.status_code} {r.text[:100]}")
             return False
         return True
