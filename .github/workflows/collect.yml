@@ -15,7 +15,29 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # 예약 실행 시작일. 이 날짜(KST) 전의 예약 실행은 건너뜁니다.
+  # 수동 실행(Run workflow)은 날짜와 무관하게 항상 돕니다.
+  # 더 이상 필요 없으면 이 job 과 아래 collect 의 needs/if 두 줄을 지우면 됩니다.
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - id: check
+        env:
+          START_DATE: '20260928'   # 2026-09-28 (월) 부터
+        run: |
+          today=$(TZ=Asia/Seoul date +%Y%m%d)
+          if [ "$GITHUB_EVENT_NAME" = "schedule" ] && [ "$today" -lt "$START_DATE" ]; then
+            echo "오늘(KST $today)은 시작일($START_DATE) 전이라 건너뜁니다."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
   collect:
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
